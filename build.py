@@ -28,7 +28,7 @@ def get_binary_name(prog_name):
 
 def load_bldfile(bldfilename="Bldfile"):
     """Load and parse the build file, returning program configuration dictionaries."""
-    progdic, srcdic, bindic, filedic = {}, {}, {}, {}
+    progdic, srcdic, bindic, filedic, optdic = {}, {}, {}, {}, {}
     try:
         with open(bldfilename, "r") as bldfile:
             for line in bldfile:
@@ -46,6 +46,8 @@ def load_bldfile(bldfilename="Bldfile"):
                         bindic[prog] = value
                     elif id == 'file':
                         filedic[prog] = value
+                    elif id == 'option':
+                        optdic[prog] = value
     except FileNotFoundError:
         print(f"Error: {bldfilename} does not exist.")
         sys.exit(1)
@@ -53,7 +55,7 @@ def load_bldfile(bldfilename="Bldfile"):
         print(f"Error reading {bldfilename}: {e}")
         sys.exit(1)
 
-    return progdic, srcdic, bindic, filedic
+    return progdic, srcdic, bindic, filedic, optdic
 
 def prepare_directories(bindir):
     """Ensure the binary directory exists, creating it if necessary."""
@@ -76,11 +78,15 @@ def validate_sources(srcdir, files):
         sys.exit(1)
     return source_files
 
-def compile_program(compiler, source_files, output_path):
+def validate_options(options):
+    return ' '.join(options.split(';'))
+
+def compile_program(compiler, source_files, output_path, options):
     """Compile the program using the specified compiler and source files."""
-    compile_command = [compiler] + source_files + ["-g", "-o", output_path]
+    compile_command = [compiler] + source_files + ["-g", "-o", output_path, options]
     try:
         print(f"Compiling {output_path}...")
+        print(f"Compile command {compile_command}...")
         subprocess.run(compile_command, check=True)
         print(f"Build successful! Binary created at {output_path}")
     except subprocess.CalledProcessError:
@@ -89,7 +95,7 @@ def compile_program(compiler, source_files, output_path):
 
 def main():
     """Main function to orchestrate the build process."""
-    progdic, srcdic, bindic, filedic = load_bldfile()
+    progdic, srcdic, bindic, filedic,optdic = load_bldfile()
     compiler = detect_compiler()
 
     for prog in progdic:
@@ -97,6 +103,7 @@ def main():
         srcdir = srcdic.get(prog)
         bindir = bindic.get(prog)
         files = filedic.get(prog)
+        option = optdic.get(prog)
 
         if not files:
             print(f"Error: No source files listed for program '{prog}'.")
@@ -109,8 +116,11 @@ def main():
         # Define the output path for the binary
         output_path = os.path.join(bindir, outbin)
 
+        #define option
+        options = validate_options(option)
+
         # Compile the program
-        compile_program(compiler, source_files, output_path)
+        compile_program(compiler, source_files, output_path, options)
 
 if __name__ == "__main__":
     main()
