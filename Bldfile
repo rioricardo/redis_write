@@ -1,0 +1,4 @@
+prog=broker
+src=src
+bin=bin
+file=main.cxx
